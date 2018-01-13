@@ -1,4 +1,6 @@
-//
+// Implementation OK
+// Documentation OK
+// 13.01.2018, Daniel Gaida
 
 #ifndef VO_H_
 #define VO_H_
@@ -117,7 +119,9 @@ public:
   * removeOutlierFeatures as well to match in size with features. 
   * @param pnts3D_vec : corresponding 3D points for passed features. They are reduced in 
   * removeOutlierFeatures as well to match in size with features. 
+  * @param inlierRatioPose : ratio of inliers for pose calculation are returned in this variable
   *
+  * @return number of good points
   */
   static int recoverPoseFromEssentialMat(int index_last_keyframe, 
     std::vector<std::vector<cv::Point2f>> &features,
@@ -208,7 +212,15 @@ public:
   static float correctTranslationForScaleFromGT(std::vector<cv::Mat> &pose,
     const std::vector<cv::Point3f> &GT_locs);
 
-
+  /**
+  * Checks whether the new calculated pose in pose.back() is similar to the previous one. If 
+  * not then the last pose is replaced by the previous or a predicted pose out of the 
+  * previous two poses. tranlation and rotation components of pose are checked and changed
+  * separately. 
+  *
+  * @param pose : camera poses at all times
+  *
+  */
   static void posePlausibilityCheck(std::vector<cv::Mat> &pose);
 
   ////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -3,3 +3,37 @@
 ################################################################################
 
 /x64
+/Debug
+/FLIRcamCalib.zip
+/FLIRcamCalib.vcxproj.filters
+/FLIRcamCalib.vcxproj
+/FLIRcamCalib.cpp
+/estimated_orients.txt
+/estimated_locs.txt
+/AssemblyInfo.cpp
+/app.rc
+/app.ico
+/PnPProblem - Kopie.cpp
+/PnPProblem - Kopie (2).cpp
+/main_detection Matlab 23 and 24 vertauscht.cpp
+/main_detection - Kopie.cpp
+/main_detection - Kopie (6).cpp
+/main_detection - Kopie (5).cpp
+/main_detection - Kopie (4).cpp
+/main_detection - Kopie (3).cpp
+/main_detection - Kopie (2).cpp
+/main_detection - beste Ergebnis bisher.cpp
+/vo_features.h
+/VO - Kopie.cpp
+/VO - Kopie (2).cpp
+/visodo.cpp
+/utils2.h
+/Tracker.h
+/Tracker.cpp
+/stdafx.h
+/stdafx.cpp
+/stats.h
+/slam.cpp
+/RobustMatcher - Kopie.cpp
+/resource.h
+/ReadMe.txt

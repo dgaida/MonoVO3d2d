@@ -1,4 +1,6 @@
-//
+// Implementation OK
+// Documentation OK
+// 13.01.2018, Daniel Gaida
 
 #include "../include/VO.h"
 #include "../include/PnPProblem.h"
@@ -285,7 +287,9 @@ void VO::removePnPoutliers(std::vector<std::vector<cv::Point2f>> &features,
 * removeOutlierFeatures as well to match in size with features.
 * @param pnts3D_vec : corresponding 3D points for passed features. They are reduced in
 * removeOutlierFeatures as well to match in size with features.
+* @param inlierRatioPose : ratio of inliers for pose calculation are returned in this variable
 *
+* @return number of good points
 */
 int VO::recoverPoseFromEssentialMat(int index_last_keyframe, 
   std::vector<std::vector<cv::Point2f>> &features,
@@ -297,16 +301,24 @@ int VO::recoverPoseFromEssentialMat(int index_last_keyframe,
 
   cv::Mat E, mask;
 
-  //float pixel_acc = 0.4;
   int sum_mask;
   
+  // are going to save shuffled features of features.back() and the one before
   std::vector<cv::Point2f> feature_1;
   std::vector<cv::Point2f> feature_2;
-  std::vector<int> indexes;
+  std::vector<int> indexes;     // shuffle indices
 
   int goodpnts = -1;
+  // recoverPose has two overloads, if true, then recoverPose is called with a depth value
+  // which for benchmark seems to be essential. For real world experiments however the given
+  // depth value does not seem to work. if first call of recoverPose does not work well (too few inliers)
+  // then algorithm automatically sets this parameter to false. 
   bool do_recoverWithDepth= true;
 
+  // call calc essential matrix and recover pose 100 times. the reason is that essential matrix
+  // is estimated from five points. as estimate can be totally wrong, we have to calculate essential
+  // matrix plenty of times with randomly shuffled features to always select 5 different features.
+  // once recoverPose has 80 % inliers break the loop
   for (int iiter = 0; iiter < 100; iiter++)
   {
     if (iiter == 99)
@@ -337,8 +349,6 @@ int VO::recoverPoseFromEssentialMat(int index_last_keyframe,
     unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
     std::shuffle(indexes.begin(), indexes.end(), std::default_random_engine(seed));
 
-    //std::shuffle(features.back().begin(), features.back().end(), std::default_random_engine(seed));
-
     feature_1.clear();
     feature_2.clear();
     feature_1.reserve(features.back().size());
@@ -358,21 +368,6 @@ int VO::recoverPoseFromEssentialMat(int index_last_keyframe,
       feature_2.push_back(features.at(features.size() - 2).at(indexes.at(ip)));
     }
 
-    //if (features.back().size() > 5)
-    //{
-    //  feature_1.clear();
-    //  feature_2.clear();
-
-    //  for (int ip = 0; ip < 6; ip++)
-    //  {
-    //    int rand_index= rand() % features.back().size();
-
-    //    feature_1.push_back(features.back().at(rand_index));
-    //    feature_2.push_back(features.at(features.size() - 2).at(rand_index));
-    //  }
-
-    //mask.empty();
-
     if (feature_1.empty() || feature_2.empty())
     {
 #ifndef SPEED_OPTIM
@@ -381,17 +376,10 @@ int VO::recoverPoseFromEssentialMat(int index_last_keyframe,
       return goodpnts;
     }
 
-    //  // this is exactly the first step of Visual Odometry in Nister 03
+    // this is exactly the first step of Visual Odometry in Nister 03
     E = cv::findEssentialMat(feature_2, feature_1, cameraMatrix,
       /*cv::LMEDS*/cv::RANSAC, 0.999, 1.0/*pixel_acc*/, mask);
-    //}
-    //else
-    //{
-      // this is exactly the first step of Visual Odometry in Nister 03
-    //E = cv::findEssentialMat(features.at(/*index_last_keyframe*/features.size() - 2),
-    //  features.back(), cameraMatrix,
-    //  /*cv::LMEDS*/cv::RANSAC, 0.999, 1.0/*pixel_acc*/, mask);
-    //}
+    
     //cvCTRACE << "essential Matrix: " << E << std::endl;
 
     sum_mask = 0;
@@ -441,23 +429,6 @@ int VO::recoverPoseFromEssentialMat(int index_last_keyframe,
 
     if (calcPose)
     {
-      // TODO
-      // überschreibe E mit werten aus matlab, test ist korrekt
-
-      /*mask = cv::Mat();
-
-      E.at<double>(0, 0) = 0.0055;
-      E.at<double>(1, 0) = 0.6107;
-      E.at<double>(2, 0) = 0.7400;
-      E.at<double>(0, 1) = -0.6140;
-      E.at<double>(1, 1) = -0.0021;
-      E.at<double>(2, 1) = 0.2865;
-      E.at<double>(0, 2) = -0.7354;
-      E.at<double>(1, 2) = -0.2820;
-      E.at<double>(2, 2) = 0.0034;
-
-      std::cout << E << std::endl;*/
-
       cv::Mat pnts3D_temp;
 
       // This function decomposes an essential matrix using decomposeEssentialMat() and 
@@ -465,16 +436,6 @@ int VO::recoverPoseFromEssentialMat(int index_last_keyframe,
       // basically means that the triangulated 3D points should have positive depth. 
       // Some details can be found in [Nister03].
       // An efficient solution to the five-point relative pose problem
-      //if (feature_1.empty())
-      //{
-      //  int goodpnts = cv::recoverPose(E, features.at(/*index_last_keyframe*/features.size() - 2),
-      //    features.back(), cameraMatrix, R, t,
-      //    750.0f/*500.0f*/, mask, pnts3D_temp);/**/
-      //}
-      //else
-      //{
-        //int goodpnts = cv::recoverPose(E, feature_2, feature_1, cameraMatrix, R, t,
-          //mask);/**/
         
       if (do_recoverWithDepth)
         goodpnts = cv::recoverPose(E, feature_2, feature_1, cameraMatrix, R, t,
@@ -490,7 +451,6 @@ int VO::recoverPoseFromEssentialMat(int index_last_keyframe,
 #endif
       }
         
-      //}
       //cvCTRACE << "t: " << t << std::endl;
       //cvCTRACE << "R: " << R << std::endl;
 #ifndef FULLVERSION_D
@@ -553,11 +513,13 @@ int VO::recoverPoseFromEssentialMat(int index_last_keyframe,
   features.back() = feature_1;
   features.at(features.size() - 2) = feature_2;
   
+  // features at k-2 has to be resorted according to indexes
   if (features.size() >= 3)
   {
     std::vector<cv::Point2f> feature_3;
     feature_3.reserve(features.back().size());
 
+    // TODO: instead of resorting features at k-2 have to resort features at last keyframe
     if (features.at(features.size() - 3).size() != features.back().size())
     {
 #ifndef SPEED_OPTIM
@@ -816,7 +778,15 @@ float VO::correctTranslationForScale(const std::vector<std::vector<cv::Point2f>>
   return median_scale;
 }
 
-
+/**
+* Checks whether the new calculated pose in pose.back() is similar to the previous one. If
+* not then the last pose is replaced by the previous or a predicted pose out of the
+* previous two poses. tranlation and rotation components of pose are checked and changed
+* separately.
+*
+* @param pose : camera poses at all times
+*
+*/
 void VO::posePlausibilityCheck(std::vector<cv::Mat> &pose)
 {
 
